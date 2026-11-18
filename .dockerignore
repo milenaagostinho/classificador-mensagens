@@ -1,0 +1,11 @@
+venv/
+.env
+.git/
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
+docs/
+n8n/
+README.md
+LICENSE

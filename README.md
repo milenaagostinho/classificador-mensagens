@@ -47,6 +47,7 @@ A IA é responsável pela parte que exige **interpretação de linguagem** (ente
 | **Google Gemini API** (`google-genai`) | Modelo de IA que classifica as mensagens |
 | **python-dotenv** | Leitura das variáveis de ambiente (`.env`) |
 | **n8n** | Fluxo de automação (Webhook, Switch, Data Table) |
+| **Docker / Docker Compose** | Execução da API e do n8n em containers |
 | **Git / GitHub** | Versionamento e entrega |
 
 ## 5. Funcionamento do Sistema
@@ -223,6 +224,54 @@ Outras mensagens para testar cada setor:
 | n8n: *"Workflow could not be started"* | Webhook configurado para responder via "Respond to Webhook", mas o node não existe ou não está conectado | Conecte o node **Responder** ao final do fluxo |
 | Erro de versão ao instalar o n8n | Node.js antigo | Atualize o Node.js (ex.: `nvm install 24`) |
 
+### 6.6. Executar com Docker (opcional)
+
+Com o Docker, a API e o n8n sobem juntos com um único comando, sem precisar instalar Python ou Node.js.
+
+**Pré-requisito:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e aberto.
+
+1. Crie o `.env` a partir do exemplo e preencha sua chave do Gemini:
+
+```bash
+cp .env.example .env
+```
+
+2. Suba os containers:
+
+```bash
+docker compose up -d --build
+```
+
+3. Confira se a API está no ar: <http://localhost:8000/health>
+
+4. Importe o fluxo no n8n:
+
+```bash
+docker compose exec n8n n8n import:workflow --input=/workflows/triagem-mensagens.json
+```
+
+5. Acesse <http://localhost:5678>, crie sua conta local e:
+   - Em **Overview → Data tables**, crie a tabela **`atendimentos`** (mesmas colunas do item 6.3).
+   - Abra o workflow importado e, no node **HTTP Request**, use a URL **`http://api:8000/classificar`**. Dentro do Docker, o n8n acessa a API pelo nome do serviço (`api`), e não por `127.0.0.1`.
+   - No node **Salvar Atendimento**, selecione a tabela `atendimentos`.
+   - Ative o workflow.
+
+6. Teste com o mesmo `curl` do item 6.4.
+
+Para parar tudo:
+
+```bash
+docker compose down
+```
+
+| Arquivo | Função |
+|---|---|
+| `Dockerfile` | Instruções para construir a imagem da API (Python + dependências + código) |
+| `docker-compose.yml` | Sobe os serviços `api` e `n8n` juntos, na mesma rede |
+| `.dockerignore` | Impede que `venv/`, `.env` e outros arquivos desnecessários entrem na imagem |
+
+> O serviço `n8n` só inicia depois que a API responde ao `/health` (healthcheck), garantindo que o fluxo não tente chamar uma API que ainda está subindo.
+
 ---
 
 ## 7. Documentação do Fluxo de Automação
@@ -294,9 +343,13 @@ classificador-mensagens/
 │   └── triagem-mensagens.json   # Fluxo exportado do n8n
 ├── docs/
 │   └── prints/          # Capturas de tela do fluxo
+├── Dockerfile           # Imagem da API
+├── docker-compose.yml   # API + n8n com um comando
+├── .dockerignore
 ├── .env.example         # Modelo das variáveis de ambiente (sem chaves)
 ├── .gitignore
 ├── requirements.txt
+├── LICENSE
 └── README.md
 ```
 
@@ -310,7 +363,6 @@ classificador-mensagens/
 <!-- ✏️ Opcional: ajuste ou remova -->
 - Enviar e-mail ou mensagem (Slack/Telegram) real para cada setor.
 - Tratar falhas da IA no fluxo com uma rota de erro no n8n.
-- Executar a API e o n8n com Docker Compose.
 - Criar um painel com indicadores dos atendimentos (volume por setor, prioridade etc.).
 
 ## 📄 Licença
