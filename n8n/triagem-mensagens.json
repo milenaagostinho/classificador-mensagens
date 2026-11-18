@@ -1,0 +1,524 @@
+{
+  "name": "Triagem de Mensagens com IA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nova-mensagem",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d3b5ddba-c2b9-426e-9e68-a4842e1148c0",
+      "name": "Webhook",
+      "webhookId": "abffcc96-a2d3-4a6f-97c6-8923cc084fa6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/classificar",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "mensagem",
+              "value": "={{ $json.body.mensagem }}"
+            },
+            {
+              "name": "remetente",
+              "value": "={{ $json.body.remetente }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "658555ac-baa3-4008-9a0b-8d0fccc37f38",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.classificacao.setor }}",
+                    "rightValue": "financeiro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f088e732-ba08-4864-81a2-8784aae7019e"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Financeiro"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "3c4e36cb-eb87-4c08-bbc9-fabdd2394000",
+                    "leftValue": "={{ $json.classificacao.setor }}",
+                    "rightValue": "suporte",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Suporte"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "8061746d-765b-4f19-9532-9ca64a03091b",
+                    "leftValue": "={{ $json.classificacao.setor }}",
+                    "rightValue": "comercial",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Comercial"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "77dbcb27-5397-401e-a18c-7acbb29f155c",
+                    "leftValue": "={{ $json.classificacao.setor }}",
+                    "rightValue": "atendimento_geral",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Geral"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        -32
+      ],
+      "id": "624a4bc2-7ce9-40c9-bbf2-5490aaee5f5d",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3d2c11dd-1f06-4b89-ad8b-74c2ace7ab75",
+              "name": "responsavel",
+              "value": "financeiro@empresa.com",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        752,
+        -256
+      ],
+      "id": "6c45ef4c-72ad-4348-a0ef-c122d9a993ae",
+      "name": "Encaminhar Financeiro"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3d2c11dd-1f06-4b89-ad8b-74c2ace7ab75",
+              "name": "responsavel",
+              "value": "suporte@empresa.com",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        752,
+        -80
+      ],
+      "id": "b2afd8b5-588c-4f61-ac6b-725e9d57702c",
+      "name": "Encaminhar Suporte"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3d2c11dd-1f06-4b89-ad8b-74c2ace7ab75",
+              "name": "responsavel",
+              "value": "comercial@empresa.com",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        752,
+        80
+      ],
+      "id": "12fbb0ba-5232-4922-be44-d3bee0133087",
+      "name": "Encaminhar Comercial"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3d2c11dd-1f06-4b89-ad8b-74c2ace7ab75",
+              "name": "responsavel",
+              "value": "atendimento@empresa.com",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        752,
+        224
+      ],
+      "id": "c4fcff3e-2c00-492d-871d-c808d2ca65f4",
+      "name": "Encaminhar Geral"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "9hNcivYUjqEDSjDh",
+          "mode": "list",
+          "cachedResultName": "atendimentos",
+          "cachedResultUrl": "/projects/nOBm4GLJ6BFOn6pW/datatables/9hNcivYUjqEDSjDh"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "remetente": "={{ $json.remetente }}",
+            "mensagem": "={{ $json.mensagem_original }}",
+            "categoria": "={{ $json.classificacao.categoria }}",
+            "setor": "={{ $json.classificacao.setor }}",
+            "prioridade": "={{ $json.classificacao.prioridade }}",
+            "sentimento": "={{ $json.classificacao.sentimento }}",
+            "resumo": "={{ $json.classificacao.resumo }}",
+            "responsavel": "={{ $json.responsavel }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "remetente",
+              "displayName": "remetente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "mensagem",
+              "displayName": "mensagem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "categoria",
+              "displayName": "categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "setor",
+              "displayName": "setor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "prioridade",
+              "displayName": "prioridade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "sentimento",
+              "displayName": "sentimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "resumo",
+              "displayName": "resumo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "responsavel",
+              "displayName": "responsavel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1088,
+        0
+      ],
+      "id": "04d248c9-7c9d-4b94-b204-c081526c31e1",
+      "name": "Salvar atendimento"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1312,
+        0
+      ],
+      "id": "03d100c7-0e20-4902-add6-fa63c8541728",
+      "name": "Responder"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Encaminhar Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Encaminhar Suporte",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Encaminhar Comercial",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Encaminhar Geral",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encaminhar Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Salvar atendimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encaminhar Suporte": {
+      "main": [
+        [
+          {
+            "node": "Salvar atendimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encaminhar Comercial": {
+      "main": [
+        [
+          {
+            "node": "Salvar atendimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encaminhar Geral": {
+      "main": [
+        [
+          {
+            "node": "Salvar atendimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar atendimento": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c2e2f109-4d84-4d97-994d-229482c1341e",
+  "meta": {
+    "instanceId": "7c1d13dc1b10feb4d62dd3b3a15fab46907a7aa6807abcaed69b7bebbbf714da"
+  },
+  "nodeGroups": [],
+  "id": "ojQiCpSKfYmcxWnI",
+  "tags": [
+    {
+      "updatedAt": "2026-11-06T21:49:56.637Z",
+      "createdAt": "2026-11-06T21:49:56.637Z",
+      "id": "jeSYNWgByw8btN18",
+      "name": "IA para Devs"
+    }
+  ]
+}
