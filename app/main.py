@@ -1,22 +1,12 @@
-from fastapi import FastAPI
-from app.schemas import MensagemEntrada, Classificacao, RespostaAPI
+from fastapi import FastAPI, HTTPException
+from app.schemas import MensagemEntrada, RespostaAPI
+from app.ia import classificar_mensagem
 
 app = FastAPI(
     title="Classificador de Mensagens com IA",
-    description="Recebe mensagens de clientes e classifica com IA.",
+    description="Recebe mensagens de clientes e classifica com Gemini.",
     version="1.0.0",
 )
-
-
-def classificar_fake(texto: str) -> Classificacao:
-    """Classificação provisória. Será trocada pela IA na Etapa 3."""
-    return Classificacao(
-        categoria="duvida",
-        setor="atendimento_geral",
-        prioridade="baixa",
-        sentimento="neutro",
-        resumo=texto[:80],
-    )
 
 
 @app.get("/health")
@@ -26,7 +16,11 @@ def health():
 
 @app.post("/classificar", response_model=RespostaAPI)
 def classificar(entrada: MensagemEntrada):
-    resultado = classificar_fake(entrada.mensagem)
+    try:
+        resultado = classificar_mensagem(entrada.mensagem)
+    except Exception as erro:
+        raise HTTPException(status_code=502, detail=f"Falha ao consultar a IA: {erro}")
+
     return RespostaAPI(
         remetente=entrada.remetente,
         mensagem_original=entrada.mensagem,
