@@ -6,6 +6,46 @@ Solução que usa **Inteligência Artificial (Google Gemini)**, uma **API em Pyt
 
 ---
 
+## 📑 Sumário
+
+### 🚀 Quero rodar o projeto
+
+| Como você vai rodar? | Siga estas seções, nesta ordem |
+|---|---|
+| 💻 **Sem Docker** (Python + Node.js na máquina) | [Pré-requisitos](#pré-requisitos-sem-docker) → [6.1 Clonar e configurar a API](#61-clonar-e-configurar-a-api) → [6.2 Rodar a API](#62-rodar-a-api) → [6.3 Rodar o n8n](#63-rodar-o-n8n) → [6.4 Testar](#64-testar) |
+| 🐳 **Com Docker** (API e n8n em containers) | [6.6 Executar com Docker](#66-executar-com-docker-opcional) → [6.4 Testar](#64-testar) |
+| ❗ Deu algum erro | [6.5 Problemas comuns](#65-problemas-comuns) |
+
+> ⚠️ As duas formas são **alternativas**: escolha uma e não rode as duas ao mesmo tempo (ambas usam as portas 8000 e 5678).
+
+### 📚 Conteúdo completo
+
+1. [Apresentação da Ideia](#1-apresentação-da-ideia)
+2. [Problema Escolhido](#2-problema-escolhido)
+3. [Solução Proposta](#3-solução-proposta)
+4. [Tecnologias Utilizadas](#4-tecnologias-utilizadas)
+5. [Funcionamento do Sistema](#5-funcionamento-do-sistema)
+   - [Arquitetura](#arquitetura)
+   - [Como a API recebe os dados](#como-a-api-recebe-os-dados)
+   - [Como a IA processa as informações](#como-a-ia-processa-as-informações)
+   - [Como a automação é executada](#como-a-automação-é-executada)
+6. [Como Executar](#6-como-executar)
+   - [6.1 a 6.3 Sem Docker](#61-clonar-e-configurar-a-api)
+   - [6.4 Testar](#64-testar)
+   - [6.5 Problemas comuns](#65-problemas-comuns)
+   - [6.6 Com Docker](#66-executar-com-docker-opcional)
+7. [Documentação do Fluxo de Automação](#7-documentação-do-fluxo-de-automação)
+   - [Fluxo completo](#71-fluxo-completo)
+   - [Execução bem-sucedida](#72-execução-bem-sucedida)
+   - [Configuração dos nodes](#73-configuração-dos-nodes)
+   - [Resultados](#74-resultados)
+- [Estrutura do Projeto](#-estrutura-do-projeto)
+- [Segurança](#-segurança)
+- [Melhorias Futuras](#-melhorias-futuras)
+- [Licença](#-licença)
+
+---
+
 ## 1. Apresentação da Ideia
 
 A ideia surgiu ao observar como pequenas empresas recebem diariamente dezenas de mensagens de clientes (dúvidas, reclamações, pedidos e elogios) e dependem de uma pessoa para ler cada uma, entender o assunto e repassar ao setor certo. Esse trabalho é repetitivo, consome tempo e atrasa o atendimento justamente das mensagens mais urgentes.
@@ -59,8 +99,8 @@ Cliente (curl / site / app)
         │  POST { mensagem, remetente }
         ▼
 ┌──────────────────────────────── n8n ────────────────────────────────┐
-│ Webhook → HTTP Request ──────────────► API FastAPI ──► Gemini        │
-│                 ◄──────── JSON classificado ◄──────┘                 │
+│ Webhook → Criar Tabela → HTTP Request ──► API FastAPI ──► Gemini     │
+│                              ◄── JSON classificado ◄──┘              │
 │                 │                                                    │
 │                 ▼                                                    │
 │              Switch (por setor)                                      │
@@ -132,17 +172,29 @@ Também foi usada `temperature=0` para que a mesma mensagem receba sempre a mesm
 | Node | Função |
 |---|---|
 | **Webhook** | Porta de entrada: recebe a mensagem via `POST /webhook/nova-mensagem` |
+| **Criar Tabela** | Cria a Data Table `atendimentos` caso ainda não exista (opção *Reuse Existing Tables*), dispensando qualquer configuração manual |
 | **HTTP Request** | Envia a mensagem para a API (`/classificar`) e recebe a classificação da IA |
 | **Switch** | Lê o campo `classificacao.setor` e direciona para uma de 4 saídas |
 | **Encaminhar (×4)** | Adiciona o e-mail do responsável de cada setor |
-| **Salvar Atendimento** | Grava o atendimento na Data Table `atendimentos` |
+| **Salvar Atendimento** | Grava o atendimento na Data Table `atendimentos`, localizada pelo nome |
 | **Responder** | Devolve a quem enviou o registro do atendimento salvo |
 
 O fluxo exportado está em [`n8n/triagem-mensagens.json`](n8n/triagem-mensagens.json).
 
 ## 6. Como Executar
 
-### Pré-requisitos
+O projeto pode ser executado de **duas formas alternativas**. Escolha **uma** delas:
+
+| Forma | Seções | Quando usar |
+|---|---|---|
+| **Sem Docker** | 6.1, 6.2 e 6.3 | Rodando a API com Python e o n8n com Node.js direto na máquina |
+| **Com Docker** | 6.6 | Subindo a API e o n8n juntos, em containers, com um único comando |
+
+Os testes (6.4) e os problemas comuns (6.5) valem para as duas formas.
+
+> ⚠️ **Não rode as duas formas ao mesmo tempo.** Ambas usam as portas **8000** (API) e **5678** (n8n). Antes de trocar de forma, pare a que estiver rodando: `docker compose down` para o Docker, ou **Ctrl+C** nos terminais do uvicorn e do n8n.
+
+### Pré-requisitos (sem Docker)
 
 - Python 3.10+
 - Node.js 20+ (para o n8n)
@@ -191,10 +243,12 @@ n8n start
 
 Acesse <http://localhost:5678> e:
 
-1. Em **Overview → Data tables**, crie a tabela **`atendimentos`** com as colunas (String): `remetente`, `mensagem`, `categoria`, `setor`, `prioridade`, `sentimento`, `resumo`, `responsavel`.
-2. Em **Workflows → Import from File**, importe `n8n/triagem-mensagens.json`.
-3. Abra o node **Salvar Atendimento** e selecione novamente a tabela `atendimentos` (o ID da tabela muda em cada instalação).
-4. Ative o workflow (botão **Active**).
+1. Em **Workflows → Import from File**, importe `n8n/triagem-mensagens.json`.
+2. Publique o workflow (botão **Publish**).
+
+O fluxo exportado já aponta para `http://127.0.0.1:8000/classificar`, que é o endereço da API rodando localmente.
+
+> A tabela `atendimentos` não precisa ser criada manualmente: o node **Criar Tabela** cria a tabela automaticamente na primeira execução.
 
 ### 6.4. Testar
 
@@ -220,7 +274,9 @@ Outras mensagens para testar cada setor:
 | Problema | Causa | Solução |
 |---|---|---|
 | API retorna **502** | Nome do modelo inválido ou chave incorreta no `.env` | Confira o código exato do modelo no AI Studio e reinicie o uvicorn após editar o `.env` |
-| n8n: *"The service refused the connection"* | Em versões recentes do Node.js, `localhost` é resolvido como IPv6 (`::1`), mas o uvicorn escuta em IPv4 | Use `http://127.0.0.1:8000/classificar` no HTTP Request |
+| n8n: *"The service refused the connection"* (sem Docker) | Em versões recentes do Node.js, `localhost` é resolvido como IPv6 (`::1`), mas o uvicorn escuta em IPv4 | Use `http://127.0.0.1:8000/classificar` no HTTP Request |
+| n8n: *"The service refused the connection"* (com Docker) | Dentro do container, `127.0.0.1` aponta para o próprio n8n, e não para a API | Use `http://api:8000/classificar` no HTTP Request (nome do serviço no `docker-compose.yml`) |
+| Erro *"port is already allocated"* ou *"address already in use"* | A outra forma de execução ainda está rodando nas portas 8000 ou 5678 | Pare a outra forma (`docker compose down` ou **Ctrl+C**) antes de iniciar |
 | n8n: *"Workflow could not be started"* | Webhook configurado para responder via "Respond to Webhook", mas o node não existe ou não está conectado | Conecte o node **Responder** ao final do fluxo |
 | Erro de versão ao instalar o n8n | Node.js antigo | Atualize o Node.js (ex.: `nvm install 24`) |
 
@@ -230,7 +286,12 @@ Com o Docker, a API e o n8n sobem juntos com um único comando, sem precisar ins
 
 **Pré-requisito:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e aberto.
 
-1. Crie o `.env` a partir do exemplo e preencha sua chave do Gemini:
+1. Clone o repositório, entre na pasta, crie o `.env` a partir do exemplo e preencha sua chave do Gemini:
+
+```bash
+git clone https://github.com/milenaagostinho/classificador-mensagens.git
+cd classificador-mensagens
+```
 
 ```bash
 cp .env.example .env
@@ -250,13 +311,13 @@ docker compose up -d --build
 docker compose exec n8n n8n import:workflow --input=/workflows/triagem-mensagens.json
 ```
 
-5. Acesse <http://localhost:5678>, crie sua conta local e:
-   - Em **Overview → Data tables**, crie a tabela **`atendimentos`** (mesmas colunas do item 6.3).
-   - Abra o workflow importado e, no node **HTTP Request**, use a URL **`http://api:8000/classificar`**. Dentro do Docker, o n8n acessa a API pelo nome do serviço (`api`), e não por `127.0.0.1`.
-   - No node **Salvar Atendimento**, selecione a tabela `atendimentos`.
-   - Ative o workflow.
+5. Acesse <http://localhost:5678>, crie sua conta local e abra o workflow importado.
+6. No node **HTTP Request**, troque a URL para **`http://api:8000/classificar`**. Dentro do Docker, o n8n acessa a API pelo nome do serviço (`api`), e não por `127.0.0.1`.
+7. Clique em **Publish**.
 
-6. Teste com o mesmo `curl` do item 6.4.
+A tabela `atendimentos` não precisa ser criada: o node **Criar Tabela** cria a tabela na primeira execução.
+
+8. Teste com o mesmo `curl` do item 6.4.
 
 Para parar tudo:
 
@@ -294,7 +355,11 @@ Execução concluída com sucesso. Os nodes em verde mostram o caminho percorrid
 
 ![Webhook](docs/prints/01-webhook-config.png)
 
-**HTTP Request:** envia `mensagem` e `remetente` (vindos do Webhook) para a API em `/classificar`.
+**Criar Tabela (Data Table):** cria a tabela `atendimentos` com as 8 colunas usadas pelo fluxo. Com a opção **Reuse Existing Tables** ligada, nas execuções seguintes ele apenas reaproveita a tabela existente, sem gerar erro. Assim, quem importar o fluxo não precisa criar nada manualmente.
+
+**HTTP Request:** envia `mensagem` e `remetente` para a API no endpoint `/classificar`. Os valores são lidos diretamente do node Webhook (`$('Webhook').item.json.body...`), porque o node anterior agora é o Criar Tabela.
+
+> O fluxo exportado (`n8n/triagem-mensagens.json`) e este print são da execução **sem Docker**, com a URL `http://127.0.0.1:8000/classificar`. Para rodar com Docker, troque a URL para `http://api:8000/classificar`, pois dentro do Docker o n8n acessa a API pelo nome do serviço (veja os itens 6.3 e 6.6).
 
 ![HTTP Request](docs/prints/02-http-request-config.png)
 
@@ -306,7 +371,7 @@ Execução concluída com sucesso. Os nodes em verde mostram o caminho percorrid
 
 ![Edit Fields](docs/prints/05-edit-fields-config.png)
 
-**Salvar Atendimento (Data Table):** mapeia cada campo da classificação para uma coluna da tabela `atendimentos`.
+**Salvar Atendimento (Data Table):** localiza a tabela pelo nome (**By Name** → `atendimentos`), o que funciona em qualquer instalação do n8n, e mapeia cada campo da classificação para uma coluna.
 
 ![Data Table](docs/prints/06-data-table-config.png)
 
